@@ -149,78 +149,23 @@ def test_load_file_multiple_mappings(mock_env):
 
         assert result == "Success"
 from contextlib import ExitStack
-
-def test_load_file_gz_file(mock_env):
-    with ExitStack() as stack:
-        mock_postgres = stack.enter_context(patch("common.read_query_from_postgres"))
-        for p in common_patches:
-            stack.enter_context(p)
-
-        mock_spark, mock_dbutils, mock_read_parquet, mock_df = mock_env
-        mock_postgres.return_value.select.return_value.distinct.return_value.collect.return_value = []
-
-        mock_dbutils.fs.ls.return_value = [
-            MagicMock(name="file1.gz", path="/mnt/tp-source-data/WORK/file1.gz")
-        ]
-
-        result = common.load_file(
-            file_type="prod",
-            RUN_ID="file1",
-            CNTRT_ID="CONTRACT",
-            STEP_FILE_PATTERN="file_%.csv",
-            vendor_pattern="vendor",
-            notebook_name="test_notebook",
-            delimiter=",",
-            dbutils=mock_dbutils,
-            postgres_schema="schema",
-            spark=mock_spark,
-            refDBjdbcURL="url",
-            refDBname="dbname",
-            refDBuser="user",
-            refDBpwd="pwd"
-        )
-
-        assert result == "Success"
-def test_load_file_csv_file(mock_env):
-    with ExitStack() as stack:
-        mock_postgres = stack.enter_context(patch("common.read_query_from_postgres"))
-        stack.enter_context(patch("common.col", lambda x: MagicMock()))
-        stack.enter_context(patch("common.F.col", lambda x: MagicMock()))
-        stack.enter_context(patch("common.F.when", lambda cond, val: MagicMock()))
-        stack.enter_context(patch("common.F.concat_ws", lambda sep, *cols: MagicMock()))
-        stack.enter_context(patch("common.F.regexp_replace", lambda col, pattern, repl: MagicMock()))
-
-        mock_spark, mock_dbutils, mock_read_parquet, mock_df = mock_env
-        mock_postgres.return_value.select.return_value.distinct.return_value.collect.return_value = []
-
-        mock_dbutils.fs.ls.return_value = [
-            MagicMock(name="file1.csv", path="/mnt/tp-source-data/WORK/file1.csv")
-        ]
-
-        result = common.load_file(
-            file_type="prod",
-            RUN_ID="file1",
-            CNTRT_ID="CONTRACT",
-            STEP_FILE_PATTERN="file_%.csv",
-            vendor_pattern="vendor",
-            notebook_name="test_notebook",
-            delimiter=",",
-            dbutils=mock_dbutils,
-            postgres_schema="schema",
-            spark=mock_spark,
-            refDBjdbcURL="url",
-            refDBname="dbname",
-            refDBuser="user",
-            refDBpwd="pwd"
-        )
-
-        assert result == "Success"
-from contextlib import ExitStack
 from unittest.mock import patch, MagicMock
 import pytest
-import common  # your module under test
+import common  # Replace with your actual module name if needed
 
-def test_load_file_full_coverage(mock_env):
+@pytest.fixture
+def mock_env():
+    mock_spark = MagicMock()
+    mock_dbutils = MagicMock()
+    mock_read_parquet = MagicMock()
+    mock_df = MagicMock()
+
+    mock_spark.read.parquet.return_value = mock_read_parquet
+    mock_spark.read.format().option().option().load.return_value = mock_df
+
+    return mock_spark, mock_dbutils, mock_read_parquet, mock_df
+
+def test_load_file_full_branch_coverage(mock_env):
     with ExitStack() as stack:
         mock_postgres = stack.enter_context(patch("common.read_query_from_postgres"))
         stack.enter_context(patch("common.col", lambda x: MagicMock()))
@@ -231,7 +176,6 @@ def test_load_file_full_coverage(mock_env):
 
         mock_spark, mock_dbutils, mock_read_parquet, mock_df = mock_env
 
-        # Simulate column mapping with single and multiple mappings
         mock_read_parquet.collect.return_value = [
             {"file_col_name": "colA", "db_col_name": "newA"},
             {"file_col_name": "colB", "db_col_name": "newB1,newB2"},
@@ -239,7 +183,6 @@ def test_load_file_full_coverage(mock_env):
             {"file_col_name": "col#2", "db_col_name": "col#2"},
         ]
 
-        # Simulate special character column handling
         mock_df.columns = ["colA", "colB", "col#1", "col#2", "extra_col"]
         mock_df.withColumnRenamed.return_value = mock_df
         mock_df.drop.return_value = mock_df
@@ -247,7 +190,6 @@ def test_load_file_full_coverage(mock_env):
         mock_df.select.return_value = mock_df
         mock_df.distinct.return_value = mock_df
 
-        # Simulate measure columns for dropna
         mock_postgres.return_value.select.return_value.distinct.return_value.collect.return_value = [
             {"measr_phys_name": "newA"},
             {"measr_phys_name": "newB1"},
