@@ -182,8 +182,13 @@ def test_load_file_gz_file(mock_env):
 
         assert result == "Success"
 def test_load_file_csv_file(mock_env):
-    with patch("common.read_query_from_postgres") as mock_postgres, \
-         *common_patches:
+    with ExitStack() as stack:
+        mock_postgres = stack.enter_context(patch("common.read_query_from_postgres"))
+        stack.enter_context(patch("common.col", lambda x: MagicMock()))
+        stack.enter_context(patch("common.F.col", lambda x: MagicMock()))
+        stack.enter_context(patch("common.F.when", lambda cond, val: MagicMock()))
+        stack.enter_context(patch("common.F.concat_ws", lambda sep, *cols: MagicMock()))
+        stack.enter_context(patch("common.F.regexp_replace", lambda col, pattern, repl: MagicMock()))
 
         mock_spark, mock_dbutils, mock_read_parquet, mock_df = mock_env
         mock_postgres.return_value.select.return_value.distinct.return_value.collect.return_value = []
@@ -210,3 +215,4 @@ def test_load_file_csv_file(mock_env):
         )
 
         assert result == "Success"
+
